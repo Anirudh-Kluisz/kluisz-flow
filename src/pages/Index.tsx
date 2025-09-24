@@ -1,11 +1,23 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { LandingHero } from "@/components/landing/LandingHero";
+import { LandingChat } from "@/components/landing/LandingChat";
+import { ExamplePrompts } from "@/components/landing/ExamplePrompts";
 
 const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-6 py-12">
+        <div className="grid lg:grid-cols-2 gap-12 items-start max-w-7xl mx-auto">
+          {/* Left Side - Hero */}
+          <div className="space-y-8">
+            <LandingHero />
+            <ExamplePrompts />
+          </div>
+          
+          {/* Right Side - Chat */}
+          <div className="lg:sticky lg:top-12">
+            <LandingChat />
+          </div>
+        </div>
       </div>
     </div>
   );
