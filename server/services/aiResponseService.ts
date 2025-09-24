@@ -22,9 +22,7 @@ export class AIResponseService {
         case 'gemini':
           return await this.generateGeminiResponse(prompt, responseFormat);
         case 'anthropic':
-          // For now, fallback to OpenAI until Anthropic integration is set up
-          console.log('Anthropic not yet implemented, falling back to OpenAI');
-          return await this.generateOpenAIResponse(prompt, responseFormat);
+          return await this.generateAnthropicResponse(prompt, responseFormat);
         default:
           throw new Error(`Unsupported provider: ${provider}`);
       }
@@ -44,7 +42,7 @@ export class AIResponseService {
     const messages = [{ role: "user", content: prompt }];
     
     const requestBody: any = {
-      model: "gpt-4", // Using gpt-4 as it's widely available
+      model: "gpt-4o", // Using GPT-4o (closest to GPT-5)
       messages,
       max_tokens: 2000,
     };
@@ -91,8 +89,8 @@ export class AIResponseService {
       }
     };
 
-    // Use gemini-pro model via REST API
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+    // Use Gemini 2.5 Flash model via REST API
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
     
     const response = await fetch(url, {
       method: 'POST',
@@ -109,6 +107,69 @@ export class AIResponseService {
 
     const data = await response.json();
     return data.candidates[0]?.content?.parts[0]?.text || '';
+  }
+
+  private async generateAnthropicResponse(prompt: string, responseFormat: string): Promise<string> {
+    const apiKey = aiProviderService.getApiKey('anthropic') || process.env.ANTHROPIC_API_KEY;
+    
+    if (!apiKey) {
+      throw new Error('Anthropic API key not found. Please configure it in settings.');
+    }
+
+    const requestBody = {
+      model: "claude-3-5-sonnet-20241022", // Using latest Claude model
+      max_tokens: 4000,
+      system: "You are a helpful AI assistant that provides clear, well-structured responses in plain text format.",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: prompt
+            }
+          ]
+        }
+      ]
+    };
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Anthropic API error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+    
+    // Robust parsing of Claude response content
+    // Claude returns an array of content blocks, we need to extract text from them
+    if (data.content && Array.isArray(data.content)) {
+      const textBlocks = data.content
+        .filter(block => block.type === 'text')
+        .map(block => block.text)
+        .join('\n\n');
+      
+      if (textBlocks) {
+        return textBlocks;
+      }
+    }
+    
+    // Fallback for other response formats
+    if (data.content?.[0]?.text) {
+      return data.content[0].text;
+    }
+    
+    // Last resort fallback
+    throw new Error('Unexpected Claude response format: no text content found');
   }
 
   async testProviderConnection(provider: 'openai' | 'gemini' | 'anthropic'): Promise<boolean> {

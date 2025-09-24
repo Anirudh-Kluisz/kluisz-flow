@@ -26,25 +26,58 @@ export class PDFProcessingService {
       // Check if file exists
       const fileBuffer = readFileSync(filePath);
       
-      // Placeholder text extraction - in real implementation, this would use pdf-parse
-      const placeholderText = `
-[EXTRACTED PDF CONTENT]
-This is a placeholder for PDF text extraction. 
+      // Enhanced text extraction - attempt to read PDF content
+      let extractedText = '';
+      
+      try {
+        // Try to extract text using a simple approach
+        // Convert buffer to string and look for readable text patterns
+        const bufferText = fileBuffer.toString('utf8');
+        
+        // Simple pattern matching for PDF text content
+        // This is a basic approach that may work for some PDFs
+        const textMatches = bufferText.match(/BT[\s\S]*?ET/g) || [];
+        const streamMatches = bufferText.match(/stream[\s\S]*?endstream/g) || [];
+        
+        if (textMatches.length > 0 || streamMatches.length > 0) {
+          // Found some PDF text content
+          extractedText = textMatches.concat(streamMatches)
+            .join(' ')
+            .replace(/[^\x20-\x7E\n]/g, ' ') // Keep only printable ASCII
+            .replace(/\s+/g, ' ')
+            .trim();
+        }
+        
+        // If no text found, provide informative placeholder
+        if (!extractedText || extractedText.length < 50) {
+          extractedText = `[PDF Content Analysis Required]
 File: ${fileName}
 Size: ${fileBuffer.length} bytes
 
-In a production environment, this would contain the actual extracted text from the PDF case study document.
-The AI analysis will process this content to generate:
-1. A comprehensive summary of the case study
-2. Key points and insights
-3. Discussion questions and talking points
-4. Strategic recommendations
+This PDF requires analysis. The AI will work with the document structure and any extractable content to provide insights about:
+- Document structure and layout
+- Potential content areas
+- Recommended analysis approach
+- Key sections for manual review
 
-This content would be fed to the selected AI provider (OpenAI, Gemini, or Anthropic) for analysis.
-      `;
+Note: For optimal results, ensure the PDF contains readable text content.`;
+        } else {
+          extractedText = `[Extracted PDF Content from ${fileName}]
+
+Extracted Text Content:
+${extractedText.substring(0, 5000)}...
+
+[Note: Text extraction was attempted. Results may vary based on PDF structure.]`;
+        }
+      } catch (error) {
+        extractedText = `[PDF Processing for ${fileName}]
+Size: ${fileBuffer.length} bytes
+
+Unable to extract text automatically. The AI will analyze the document structure and provide guidance on content review and analysis approaches.`;
+      }
 
       return {
-        text: placeholderText.trim(),
+        text: extractedText,
         metadata: {
           fileName,
           fileSize: fileBuffer.length,

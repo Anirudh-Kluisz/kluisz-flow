@@ -36,13 +36,13 @@ export class DocumentGenerationService {
     provider: string
   ): Promise<string> {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const docFileName = `${originalFileName.replace('.pdf', '')}_analysis_${provider}_${timestamp}.txt`;
+    const docFileName = `${originalFileName.replace('.pdf', '')}_analysis_${provider}_${timestamp}.doc`;
     const docPath = join(this.outputDir, docFileName);
 
-    // Generate document content in a readable format
-    const docContent = this.formatCaseStudyDocument(analysis, originalFileName, provider);
+    // Generate document content in RTF format (compatible with Word)
+    const docContent = this.formatCaseStudyDocumentAsRTF(analysis, originalFileName, provider);
     
-    // For now, save as .txt file (can be enhanced to .doc format with proper packages)
+    // Save as .doc file in RTF format
     writeFileSync(docPath, docContent, 'utf8');
     
     console.log(`Case study document generated: ${docPath}`);
@@ -101,6 +101,68 @@ Please review and validate all recommendations before making business decisions.
 `;
 
     return content.trim();
+  }
+
+  private formatCaseStudyDocumentAsRTF(
+    analysis: CaseStudyAnalysis,
+    originalFileName: string,
+    provider: string
+  ): string {
+    // RTF format that can be opened by Word and other document processors
+    const rtfContent = `{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}{\\f1 Arial;}}
+{\\colortbl;\\red0\\green0\\blue0;\\red0\\green0\\blue255;}
+\\f1\\fs24
+
+{\\b\\fs32 CASE STUDY ANALYSIS REPORT}\\par
+\\par
+{\\b Document:} ${originalFileName}\\par
+{\\b Analyzed by:} ${provider.toUpperCase()} AI\\par
+{\\b Generated:} ${analysis.generatedAt.toLocaleString()}\\par
+\\par
+
+{\\b\\fs28 EXECUTIVE SUMMARY}\\par
+\\par
+${analysis.summary.replace(/\n/g, '\\par\n')}\\par
+\\par
+
+{\\b\\fs28 KEY POINTS}\\par
+\\par
+${analysis.keyPoints.map((point, index) => `${index + 1}. ${point}`).join('\\par\n')}\\par
+\\par
+
+{\\b\\fs28 SLIDE CONTENT FOR PRESENTATION}\\par
+\\par
+{\\b Title:} ${analysis.slideContent.title}\\par
+\\par
+{\\b Overview:}\\par
+${analysis.slideContent.overview.replace(/\n/g, '\\par\n')}\\par
+\\par
+{\\b Key Insights:}\\par
+${analysis.slideContent.keyInsights.map((insight) => `• ${insight}`).join('\\par\n')}\\par
+\\par
+{\\b Action Items:}\\par
+${analysis.slideContent.actionItems.map((item) => `• ${item}`).join('\\par\n')}\\par
+\\par
+{\\b Discussion Starters:}\\par
+${analysis.slideContent.discussionStarters.map((starter) => `• ${starter}`).join('\\par\n')}\\par
+\\par
+
+{\\b\\fs28 DISCUSSION QUESTIONS}\\par
+\\par
+${analysis.discussionQuestions.map((question, index) => `${index + 1}. ${question}`).join('\\par\n')}\\par
+\\par
+
+{\\b\\fs28 STRATEGIC RECOMMENDATIONS}\\par
+\\par
+${analysis.recommendations.map((rec, index) => `${index + 1}. ${rec}`).join('\\par\n')}\\par
+\\par
+
+\\par
+{\\i This analysis was generated automatically using AI technology.}\\par
+{\\i Please review and validate all recommendations before making business decisions.}\\par
+}`;
+
+    return rtfContent;
   }
 
   // Enhanced method for when officegen package is available
