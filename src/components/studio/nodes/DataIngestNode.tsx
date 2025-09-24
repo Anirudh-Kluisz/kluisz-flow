@@ -1,4 +1,4 @@
-import { memo, useState, useEffect } from 'react';
+import { memo, useState, useEffect, useRef } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +45,7 @@ export const DataIngestNode = memo(({ data, selected }: NodeProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<Map<string, AnalysisResult>>(new Map());
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load previously uploaded files and available providers on component mount
   useEffect(() => {
@@ -84,6 +85,17 @@ export const DataIngestNode = memo(({ data, selected }: NodeProps) => {
 
     loadData();
   }, []);
+
+  // Set up file input event listener properly
+  useEffect(() => {
+    const fileInput = fileInputRef.current;
+    if (fileInput) {
+      fileInput.addEventListener('change', handleFileUpload);
+      return () => {
+        fileInput.removeEventListener('change', handleFileUpload);
+      };
+    }
+  }, []); // Empty dependency array - only run once
 
   const handleFileUpload = async (event: Event) => {
     const input = event.target as HTMLInputElement;
@@ -363,20 +375,15 @@ Generated at: ${new Date().toLocaleString()}
         <div className="space-y-3">
           <div className="w-full">
             <input
+              ref={fileInputRef}
               type="file"
-              ref={(input) => {
-                if (input) {
-                  input.addEventListener('change', handleFileUpload);
-                }
-              }}
               accept=".pdf,.docx,.txt"
               multiple
               className="hidden"
-              id="file-upload"
             />
             <Button 
               className="w-full" 
-              onClick={() => document.getElementById('file-upload')?.click()}
+              onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
               data-testid="button-upload"
             >
