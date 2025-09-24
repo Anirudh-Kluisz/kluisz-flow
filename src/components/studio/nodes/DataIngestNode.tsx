@@ -8,17 +8,31 @@ import {
   Upload,
   FileText,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Brain,
+  Settings,
+  Download,
+  Trash2
 } from 'lucide-react';
 import { ObjectUploader } from '@/components/ObjectUploader';
 import type { UploadResult } from '@uppy/core';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface UploadedFile {
+  id: string;
   name: string;
   path: string;
   size: number;
   uploadedAt: Date;
+  mimeType?: string;
+}
+
+interface AnalysisResult {
+  analysis: any;
+  documentPath: string;
+  slideContent: string;
+  provider: string;
 }
 
 export const DataIngestNode = memo(({ data, selected }: NodeProps) => {
@@ -26,28 +40,49 @@ export const DataIngestNode = memo(({ data, selected }: NodeProps) => {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [availableProviders, setAvailableProviders] = useState<string[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<string>('openai');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState<Map<string, AnalysisResult>>(new Map());
   const { toast } = useToast();
 
-  // Load previously uploaded files on component mount
+  // Load previously uploaded files and available providers on component mount
   useEffect(() => {
-    const loadUploadedFiles = async () => {
+    const loadData = async () => {
       try {
-        const response = await fetch('/api/files');
-        if (response.ok) {
-          const files: UploadedFile[] = await response.json();
+        // Load uploaded files
+        const filesResponse = await fetch('/api/files');
+        if (filesResponse.ok) {
+          const files: any[] = await filesResponse.json();
           setUploadedFiles(files.map(file => ({
-            ...file,
+            id: file.id || file.name, // Use file.id if available, fallback to name
+            name: file.name,
+            path: file.path,
+            size: file.size,
+            mimeType: file.mimeType,
             uploadedAt: new Date(file.uploadedAt)
           })));
         }
+
+        // Load available AI providers
+        const providersResponse = await fetch('/api/case-study/providers');
+        if (providersResponse.ok) {
+          const { availableProviders, currentProvider } = await providersResponse.json();
+          setAvailableProviders(availableProviders);
+          if (currentProvider) {
+            setSelectedProvider(currentProvider);
+          } else if (availableProviders.length > 0) {
+            setSelectedProvider(availableProviders[0]);
+          }
+        }
       } catch (error) {
-        console.error('Error loading uploaded files:', error);
+        console.error('Error loading data:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadUploadedFiles();
+    loadData();
   }, []);
   
   const handleGetUploadParameters = async () => {
@@ -104,9 +139,11 @@ export const DataIngestNode = memo(({ data, selected }: NodeProps) => {
           
           // Add to uploaded files list
           const newFile: UploadedFile = {
+            id: fileInfo.id,
             name: fileInfo.name,
             path: fileInfo.path,
             size: fileInfo.size,
+            mimeType: fileInfo.mimeType,
             uploadedAt: new Date(),
           };
           
@@ -117,9 +154,11 @@ export const DataIngestNode = memo(({ data, selected }: NodeProps) => {
             const responseData = JSON.parse(String(uploadedFile.response.body));
             if (responseData.fileInfo) {
               const newFile: UploadedFile = {
+                id: responseData.fileInfo.id,
                 name: responseData.fileInfo.name,
                 path: responseData.fileInfo.path,
                 size: responseData.fileInfo.size,
+                mimeType: responseData.fileInfo.mimeType,
                 uploadedAt: new Date(responseData.fileInfo.uploadedAt),
               };
               
@@ -151,6 +190,93 @@ export const DataIngestNode = memo(({ data, selected }: NodeProps) => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const handleCaseStudyAnalysis = async (fileId: string, fileName: string) => {
+    if (!selectedProvider) {
+      toast({
+        title: "No AI Provider",
+        description: "Please configure an AI provider in Settings first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    
+    try {
+      console.log(`Starting analysis for ${fileName} with ${selectedProvider}`);
+      
+      const response = await fetch('/api/case-study/complete-analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileId,
+          fileName,
+          provider: selectedProvider
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Analysis failed');
+      }
+
+      const result = await response.json();
+      
+      // Store analysis result
+      setAnalysisResults(prev => new Map(prev.set(fileId, {
+        analysis: result.analysis,
+        documentPath: result.documentPath,
+        slideContent: result.slideContent,
+        provider: result.provider
+      })));
+
+      toast({
+        title: "Analysis Complete",
+        description: `Case study analysis completed successfully using ${selectedProvider.toUpperCase()}`,
+      });
+
+      console.log('Analysis completed:', result);
+      
+    } catch (error) {
+      console.error('Analysis error:', error);
+      toast({
+        title: "Analysis Failed",
+        description: `Failed to analyze case study: ${error.message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const downloadAnalysisResult = (fileId: string, fileName: string) => {
+    const result = analysisResults.get(fileId);
+    if (!result) return;
+
+    // Create downloadable content
+    const content = `CASE STUDY ANALYSIS: ${fileName}
+===============================
+
+${result.slideContent}
+
+DETAILED ANALYSIS:
+${JSON.stringify(result.analysis, null, 2)}
+
+Generated by: ${result.provider.toUpperCase()}
+Generated at: ${new Date().toLocaleString()}
+`;
+
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fileName.replace('.pdf', '')}_analysis.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
   
   return (
@@ -197,27 +323,88 @@ export const DataIngestNode = memo(({ data, selected }: NodeProps) => {
             </div>
           </ObjectUploader>
           
+          {/* AI Provider Selection */}
+          {availableProviders.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-muted-foreground">
+                AI Analysis Provider
+              </div>
+              <Select value={selectedProvider} onValueChange={setSelectedProvider}>
+                <SelectTrigger className="h-8 text-xs" data-testid="select-ai-provider">
+                  <SelectValue placeholder="Select AI provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableProviders.map((provider) => (
+                    <SelectItem key={provider} value={provider}>
+                      {provider.toUpperCase()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Uploaded Files List */}
           {uploadedFiles.length > 0 && (
             <div className="space-y-2">
               <div className="text-xs font-medium text-muted-foreground">
                 Uploaded Files ({uploadedFiles.length})
               </div>
-              <div className="max-h-32 overflow-y-auto space-y-1">
+              <div className="max-h-40 overflow-y-auto space-y-1">
                 {uploadedFiles.map((file, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 p-2 bg-muted/30 rounded border text-xs"
+                    className="space-y-2 p-2 bg-muted/30 rounded border text-xs"
                     data-testid={`file-item-${index}`}
                   >
-                    <FileText className="w-3 h-3 text-blue-400 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="truncate font-medium">{file.name}</div>
-                      <div className="text-muted-foreground">
-                        {formatFileSize(file.size)}
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-3 h-3 text-blue-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="truncate font-medium">{file.name}</div>
+                        <div className="text-muted-foreground">
+                          {formatFileSize(file.size)} • {file.mimeType || 'Unknown type'}
+                        </div>
                       </div>
+                      <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
                     </div>
-                    <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
+                    
+                    {/* AI Analysis Controls for PDFs */}
+                    {file.mimeType === 'application/pdf' && availableProviders.length > 0 && (
+                      <div className="flex items-center gap-1 mt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => handleCaseStudyAnalysis(file.id, file.name)}
+                          disabled={isAnalyzing}
+                          data-testid={`button-analyze-${file.id}`}
+                        >
+                          <Brain className="w-3 h-3 mr-1" />
+                          {isAnalyzing ? 'Analyzing...' : 'Analyze'}
+                        </Button>
+                        
+                        {analysisResults.has(file.id) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => downloadAnalysisResult(file.id, file.name)}
+                            data-testid={`button-download-${file.id}`}
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            Download
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Show analysis status */}
+                    {analysisResults.has(file.id) && (
+                      <div className="flex items-center gap-1 text-green-600">
+                        <CheckCircle className="w-3 h-3" />
+                        <span className="text-xs">Analysis completed with {analysisResults.get(file.id)?.provider.toUpperCase()}</span>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

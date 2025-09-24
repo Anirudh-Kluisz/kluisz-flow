@@ -2,9 +2,14 @@ import { Express } from 'express';
 import { aiProviderService } from './services/aiProviderService';
 import { ObjectStorageService, ObjectNotFoundError } from './objectStorage';
 import { FileStorageService } from './fileStorageService';
+import { PDFProcessingService } from './services/pdfProcessingService';
+import { caseStudyAnalysisService } from './services/caseStudyAnalysisService';
+import { documentGenerationService } from './services/documentGenerationService';
+import { aiResponseService } from './services/aiResponseService';
 
 export function registerRoutes(app: Express) {
   const fileStorageService = new FileStorageService();
+  const pdfProcessingService = new PDFProcessingService();
   // AI Provider Configuration endpoints
   app.post('/api/ai-providers/save', async (req, res) => {
     try {
@@ -258,6 +263,93 @@ export function registerRoutes(app: Express) {
         return res.sendStatus(404);
       }
       return res.sendStatus(500);
+    }
+  });
+
+  // Case Study Analysis Workflow endpoints
+  
+  // Complete end-to-end case study analysis workflow
+  app.post('/api/case-study/complete-analysis', async (req, res) => {
+    try {
+      const { fileId, fileName, provider = 'openai' } = req.body;
+      
+      if (!fileId || !fileName) {
+        return res.status(400).json({ error: 'File ID and name are required' });
+      }
+
+      console.log(`Starting complete case study analysis for ${fileName}`);
+
+      // Step 1: Extract text from PDF
+      const extractedContent = await pdfProcessingService.extractTextFromPDF(fileId, fileName);
+      console.log('PDF text extracted successfully');
+
+      // Step 2: Analyze with AI
+      const analysis = await caseStudyAnalysisService.analyzeCaseStudy(
+        extractedContent.text,
+        fileName,
+        provider
+      );
+      console.log('AI analysis completed');
+
+      // Step 3: Generate document
+      const documentPath = await documentGenerationService.generateCaseStudyDocument(
+        analysis,
+        fileName,
+        provider
+      );
+      console.log('Document generated successfully');
+
+      // Step 4: Generate slide content
+      const slideContent = await documentGenerationService.generateSlideContent(analysis);
+      
+      res.json({
+        success: true,
+        analysis,
+        documentPath,
+        slideContent,
+        extractedContent: extractedContent.metadata,
+        provider,
+        message: 'Complete case study analysis workflow completed successfully'
+      });
+    } catch (error) {
+      console.error('Error in complete analysis workflow:', error);
+      res.status(500).json({ 
+        error: `Complete analysis failed: ${error.message}`,
+        step: 'unknown'
+      });
+    }
+  });
+
+  // Get available AI providers
+  app.get('/api/case-study/providers', async (req, res) => {
+    try {
+      const availableProviders = aiResponseService.getAvailableProviders();
+      const providerConfig = aiProviderService.getConfiguration();
+      
+      res.json({
+        success: true,
+        availableProviders,
+        currentProvider: aiProviderService.getCurrentProvider(),
+        providerConfig
+      });
+    } catch (error) {
+      console.error('Error getting providers:', error);
+      res.status(500).json({ error: 'Failed to get provider information' });
+    }
+  });
+
+  // List generated documents
+  app.get('/api/case-study/documents', async (req, res) => {
+    try {
+      const documents = await documentGenerationService.listGeneratedDocuments();
+      
+      res.json({
+        success: true,
+        documents
+      });
+    } catch (error) {
+      console.error('Error listing documents:', error);
+      res.status(500).json({ error: 'Failed to list generated documents' });
     }
   });
 }
