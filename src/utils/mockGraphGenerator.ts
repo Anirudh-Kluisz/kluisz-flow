@@ -179,7 +179,7 @@ export const generateMockGraphSpec = (prompt: string): GraphSpec => {
         id: "process1",
         type: "Processor",
         label: "AI Processor",
-        config: { model: "gpt-4" }
+        config: { model: "claude-3-sonnet" }
       },
       {
         id: "output1",

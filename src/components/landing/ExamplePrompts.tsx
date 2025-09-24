@@ -54,31 +54,54 @@ export const ExamplePrompts = () => {
   };
 
   return (
-    <div className="space-y-4 animate-slide-up">
-      <h3 className="text-lg font-semibold text-foreground mb-6">Try these examples:</h3>
+    <div className="space-y-6 animate-slide-up">
+      <div className="text-center space-y-2">
+        <h2 className="text-2xl font-bold text-foreground">Start from an example</h2>
+        <p className="text-muted-foreground">Choose a pre-built workflow and customize it to your needs</p>
+      </div>
       
-      <div className="space-y-3">
+      <div className="grid gap-4">
         {examplePrompts.map((example) => (
-          <Card key={example.id} className="glass-card p-4 hover:border-brand-primary/30 transition-all duration-300 group cursor-pointer">
-            <div className="flex items-start gap-4">
-              <div className={`p-2 rounded-lg ${example.bgColor}`}>
-                <example.icon className={`w-5 h-5 ${example.color}`} />
+          <Card 
+            key={example.id} 
+            className="glass-card p-6 hover:border-brand-primary/30 hover:shadow-lg hover:shadow-brand-primary/10 transition-all duration-300 group cursor-pointer"
+            onClick={() => handlePromptClick(example.prompt, example.title)}
+          >
+            <div className="flex items-start gap-6">
+              <div className={`p-3 rounded-xl ${example.bgColor} group-hover:scale-110 transition-transform duration-300`}>
+                <example.icon className={`w-6 h-6 ${example.color}`} />
               </div>
               
-              <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-foreground group-hover:text-brand-primary transition-colors">
-                  {example.title}
-                </h4>
-                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                  {example.description}
-                </p>
+              <div className="flex-1 min-w-0 space-y-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground group-hover:text-brand-primary transition-colors">
+                    {example.title}
+                  </h3>
+                  <p className="text-muted-foreground mt-1 leading-relaxed">
+                    {example.description}
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-brand-primary/60"></div>
+                    <span>5-7 nodes</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-brand-accent/60"></div>
+                    <span>Ready to run</span>
+                  </div>
+                </div>
               </div>
               
               <Button
-                onClick={() => handlePromptClick(example.prompt, example.title)}
                 variant="outline"
                 size="sm"
                 className="border-brand-border hover:bg-brand-primary hover:text-background hover:border-brand-primary opacity-0 group-hover:opacity-100 transition-all duration-300"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePromptClick(example.prompt, example.title);
+                }}
               >
                 Use this
                 <ArrowRight className="w-3 h-3 ml-2" />

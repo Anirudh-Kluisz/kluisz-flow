@@ -26,13 +26,11 @@ export const LandingHero = () => {
           {/* Main Heading */}
           <div className="space-y-6">
             <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
-              Build & compare{" "}
+              Build and compare{" "}
               <span className="bg-gradient-to-r from-brand-primary to-brand-accent bg-clip-text text-transparent">
                 agentic workflows
               </span>
-              .{" "}
-              <br />
-              Ship faster.
+              .
             </h1>
             
             <p className="text-xl text-muted-foreground leading-relaxed max-w-2xl">
@@ -48,13 +46,16 @@ export const LandingHero = () => {
               <span className="text-sm">Multi-Agent Orchestration</span>
             </div>
             <div className="flex items-center gap-2 glass-card px-4 py-2">
-              <Workflow className="w-5 h-5 text-brand-accent" />
-              <span className="text-sm">Visual Node Editor</span>
-            </div>
-            <div className="flex items-center gap-2 glass-card px-4 py-2">
               <Zap className="w-5 h-5 text-brand-primary" />
               <span className="text-sm">One-Click Deploy</span>
             </div>
+            <a 
+              href="/compare"
+              className="flex items-center gap-2 glass-card px-4 py-2 hover:bg-brand-muted/50 transition-colors cursor-pointer"
+            >
+              <Workflow className="w-5 h-5 text-brand-accent" />
+              <span className="text-sm">Compare builds</span>
+            </a>
           </div>
           
           {/* CTA Buttons */}

@@ -89,10 +89,6 @@ export const LandingChat = () => {
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-brand-accent rounded-full animate-pulse"></div>
           <span className="font-semibold">AI Studio Architect</span>
-          <Badge variant="outline" className="ml-auto text-xs bg-brand-primary/10 text-brand-primary border-brand-primary/20">
-            <Sparkles className="w-3 h-3 mr-1" />
-            GPT-4
-          </Badge>
         </div>
       </div>
 

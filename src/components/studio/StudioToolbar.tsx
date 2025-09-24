@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useStudioStore } from "@/stores/studioStore";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { 
   Play, 
   Square, 
@@ -20,6 +21,7 @@ import {
 export const StudioToolbar = () => {
   const { isRunning, setIsRunning, nodes, runStatus } = useStudioStore();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleRun = () => {
     if (nodes.length === 0) {
@@ -32,19 +34,17 @@ export const StudioToolbar = () => {
     }
 
     setIsRunning(true);
+    
+    // Generate a run ID and navigate to run detail page
+    const runId = `run-${Date.now()}`;
+    
     toast({
       title: "Workflow Started",
       description: `Running ${nodes.length} nodes...`,
     });
 
-    // Simulate workflow execution
-    setTimeout(() => {
-      setIsRunning(false);
-      toast({
-        title: "Workflow Complete",
-        description: "All nodes executed successfully.",
-      });
-    }, 3000);
+    // Navigate to run detail page 
+    navigate(`/runs/${runId}`);
   };
 
   const handleStop = () => {
@@ -94,7 +94,7 @@ export const StudioToolbar = () => {
             className="bg-brand-primary hover:bg-brand-primary/90 text-background"
           >
             <Play className="w-4 h-4 mr-2" />
-            Run
+            Run Workflow
           </Button>
         ) : (
           <Button 
