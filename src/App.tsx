@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Studio from "./pages/Studio";
 import Compare from "./pages/Compare";
 import RunDetail from "./pages/RunDetail";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/studio" element={<Studio />} />
           <Route path="/compare" element={<Compare />} />
           <Route path="/runs/:id" element={<RunDetail />} />
+          <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

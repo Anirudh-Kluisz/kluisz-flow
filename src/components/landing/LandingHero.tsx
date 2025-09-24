@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Zap, Brain, Workflow } from "lucide-react";
+import { ArrowRight, Zap, Brain, Workflow, Settings } from "lucide-react";
+import { Link } from "react-router-dom";
 import heroWorkflow from "@/assets/hero-workflow.jpg";
 
 export const LandingHero = () => {
@@ -60,13 +61,21 @@ export const LandingHero = () => {
           
           {/* CTA Buttons */}
           <div className="flex gap-4 flex-wrap">
-            <Button size="lg" className="bg-brand-primary hover:bg-brand-primary/90 text-background font-semibold">
-              Start Building
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
+            <Link to="/studio">
+              <Button size="lg" className="bg-brand-primary hover:bg-brand-primary/90 text-background font-semibold" data-testid="button-start-building">
+                Start Building
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
             <Button variant="outline" size="lg" className="border-brand-border hover:bg-brand-muted/50">
               View Examples
             </Button>
+            <Link to="/settings">
+              <Button variant="outline" size="lg" className="border-brand-border hover:bg-brand-muted/50" data-testid="button-settings">
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

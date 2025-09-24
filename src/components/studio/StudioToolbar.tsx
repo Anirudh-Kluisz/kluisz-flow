@@ -15,7 +15,8 @@ import {
   ZoomOut,
   Maximize,
   TestTube,
-  Clock
+  Clock,
+  Settings
 } from "lucide-react";
 
 export const StudioToolbar = () => {
@@ -186,6 +187,18 @@ export const StudioToolbar = () => {
         </Button>
         <Button variant="ghost" size="sm">
           <Maximize className="w-4 h-4" />
+        </Button>
+
+        <Separator orientation="vertical" className="h-6" />
+        
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={() => navigate('/settings')}
+          className="hover:bg-brand-muted/50"
+          data-testid="button-settings-studio"
+        >
+          <Settings className="w-4 h-4" />
         </Button>
       </div>
     </div>
