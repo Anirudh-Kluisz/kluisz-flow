@@ -377,7 +377,7 @@ export function registerRoutes(app: Express) {
       }
       
       const provider = availableProviders[0]; // Use first available provider
-      const results = [];
+      const results: any[] = [];
       let documentsCreated = 0;
       
       // Process each PDF file

@@ -184,6 +184,59 @@ Case Study Content:
     
     return results;
   }
+
+  async runCompleteAnalysis(
+    fileId: string,
+    fileName: string,
+    provider: 'openai' | 'gemini' | 'anthropic' = 'openai'
+  ): Promise<{
+    analysis: CaseStudyAnalysis;
+    documentPath?: string;
+    slideContent: string;
+  }> {
+    try {
+      console.log(`Starting complete analysis workflow for ${fileName} using ${provider}`);
+      
+      // Import services dynamically to avoid circular dependencies
+      const pdfProcessingModule = await import('./pdfProcessingService');
+      const documentGenerationModule = await import('./documentGenerationService');
+      const pdfProcessingService = new pdfProcessingModule.PDFProcessingService();
+      const documentGenerationService = new documentGenerationModule.DocumentGenerationService();
+
+      // Step 1: Extract text from PDF
+      const extractedContent = await pdfProcessingService.extractTextFromPDF(fileId, fileName);
+      console.log('PDF text extracted successfully');
+
+      // Step 2: Analyze with AI
+      const analysis = await this.analyzeCaseStudy(
+        extractedContent.text,
+        fileName,
+        provider
+      );
+      console.log('AI analysis completed');
+
+      // Step 3: Generate document
+      const documentPath = await documentGenerationService.generateCaseStudyDocument(
+        analysis,
+        fileName,
+        provider
+      );
+      console.log('Document generated successfully');
+
+      // Step 4: Generate slide content
+      const slideContent = await documentGenerationService.generateSlideContent(analysis);
+      
+      return {
+        analysis,
+        documentPath,
+        slideContent
+      };
+      
+    } catch (error) {
+      console.error('Error in complete analysis workflow:', error);
+      throw new Error(`Complete analysis failed: ${error.message}`);
+    }
+  }
 }
 
 export const caseStudyAnalysisService = new CaseStudyAnalysisService();
