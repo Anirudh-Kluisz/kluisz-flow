@@ -144,8 +144,42 @@ export const DataIngestNode = memo(({ data, selected }: NodeProps) => {
       input.value = '';
     } catch (error) {
       console.error('Upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to upload files",
+        variant: "destructive"
+      });
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleClearFiles = async () => {
+    try {
+      // Clear files on backend
+      const response = await fetch('/api/files/clear', {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        // Clear files from local state
+        setUploadedFiles([]);
+        setAnalysisResults(new Map());
+        
+        toast({
+          title: "Files Cleared",
+          description: "All uploaded files have been cleared. You can start fresh!",
+        });
+      } else {
+        throw new Error('Failed to clear files');
+      }
+    } catch (error) {
+      console.error('Clear files error:', error);
+      toast({
+        title: "Clear Failed",
+        description: "Failed to clear files. Please try again.",
+        variant: "destructive"
+      });
     }
   };
   
@@ -381,17 +415,31 @@ Generated at: ${new Date().toLocaleString()}
               multiple
               className="hidden"
             />
-            <Button 
-              className="w-full" 
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              data-testid="button-upload"
-            >
-              <div className="flex items-center gap-2">
-                <Upload className="w-4 h-4" />
-                <span>{isUploading ? 'Uploading...' : 'Upload PDF/Documents'}</span>
-              </div>
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                className="flex-1" 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                data-testid="button-upload"
+              >
+                <div className="flex items-center gap-2">
+                  <Upload className="w-4 h-4" />
+                  <span>{isUploading ? 'Uploading...' : 'Upload'}</span>
+                </div>
+              </Button>
+              
+              {uploadedFiles.length > 0 && (
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearFiles}
+                  className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                  data-testid="button-clear-files"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           </div>
           
           {/* AI Provider Selection */}

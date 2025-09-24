@@ -429,4 +429,44 @@ export function registerRoutes(app: Express) {
       res.status(500).json({ error: 'Workflow execution failed' });
     }
   });
+
+  // Clear all uploaded files
+  app.post('/api/files/clear', async (req, res) => {
+    try {
+      // Clear files from storage
+      const allFiles = await fileStorageService.getAllFiles();
+      
+      // Delete physical files
+      for (const file of allFiles) {
+        try {
+          if (file.path.startsWith('/uploads/')) {
+            const fs = await import('fs');
+            const path = await import('path');
+            const fullPath = path.join(process.cwd(), 'uploads', file.path.replace('/uploads/', ''));
+            if (fs.existsSync(fullPath)) {
+              fs.unlinkSync(fullPath);
+            }
+          }
+        } catch (error) {
+          console.warn(`Failed to delete file ${file.path}:`, error);
+        }
+      }
+      
+      // Clear metadata
+      const fs = await import('fs');
+      const path = await import('path');
+      const metadataPath = path.join(process.cwd(), 'uploads', 'metadata.json');
+      fs.writeFileSync(metadataPath, '[]');
+      
+      res.json({
+        success: true,
+        message: `Cleared ${allFiles.length} files`,
+        filesCleared: allFiles.length
+      });
+      
+    } catch (error) {
+      console.error('Error clearing files:', error);
+      res.status(500).json({ error: 'Failed to clear files' });
+    }
+  });
 }
