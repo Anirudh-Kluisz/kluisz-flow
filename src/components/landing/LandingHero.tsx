@@ -26,7 +26,7 @@ export const LandingHero = () => {
           {/* Main Heading */}
           <div className="space-y-6">
             <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
-              Build{" "}
+              Build & compare{" "}
               <span className="bg-gradient-to-r from-brand-primary to-brand-accent bg-clip-text text-transparent">
                 agentic workflows
               </span>
