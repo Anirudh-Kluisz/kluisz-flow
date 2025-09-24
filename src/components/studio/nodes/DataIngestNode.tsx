@@ -84,6 +84,58 @@ export const DataIngestNode = memo(({ data, selected }: NodeProps) => {
 
     loadData();
   }, []);
+
+  const handleFileUpload = async (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const files = input.files;
+    
+    if (!files || files.length === 0) return;
+    
+    setIsUploading(true);
+    
+    try {
+      for (const file of Array.from(files)) {
+        // Generate unique file ID
+        const fileId = crypto.randomUUID ? crypto.randomUUID() : 'file-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        
+        // Upload file to local storage
+        const response = await fetch(`/api/files/local-upload/${fileId}`, {
+          method: 'PUT',
+          body: file,
+          headers: {
+            'Content-Type': file.type || 'application/octet-stream',
+            'X-File-Name': encodeURIComponent(file.name),
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.fileInfo) {
+          const newFile: UploadedFile = {
+            id: result.fileInfo.id,
+            name: result.fileInfo.name,
+            path: result.fileInfo.path,
+            size: result.fileInfo.size,
+            mimeType: result.fileInfo.mimeType,
+            uploadedAt: new Date(result.fileInfo.uploadedAt),
+          };
+          
+          setUploadedFiles(prev => [...prev, newFile]);
+        }
+      }
+      
+      // Clear the input
+      input.value = '';
+    } catch (error) {
+      console.error('Upload error:', error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
   
   const handleGetUploadParameters = async () => {
     const response = await fetch('/api/files/upload', {
@@ -309,19 +361,31 @@ Generated at: ${new Date().toLocaleString()}
         
         {/* Upload Section */}
         <div className="space-y-3">
-          <ObjectUploader
-            maxNumberOfFiles={5}
-            maxFileSize={50 * 1024 * 1024} // 50MB
-            allowedFileTypes={['.pdf', '.docx', '.txt']}
-            onGetUploadParameters={handleGetUploadParameters}
-            onComplete={handleUploadComplete}
-            buttonClassName="w-full"
-          >
-            <div className="flex items-center gap-2">
-              <Upload className="w-4 h-4" />
-              <span>Upload PDF/Documents</span>
-            </div>
-          </ObjectUploader>
+          <div className="w-full">
+            <input
+              type="file"
+              ref={(input) => {
+                if (input) {
+                  input.addEventListener('change', handleFileUpload);
+                }
+              }}
+              accept=".pdf,.docx,.txt"
+              multiple
+              className="hidden"
+              id="file-upload"
+            />
+            <Button 
+              className="w-full" 
+              onClick={() => document.getElementById('file-upload')?.click()}
+              disabled={isUploading}
+              data-testid="button-upload"
+            >
+              <div className="flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                <span>{isUploading ? 'Uploading...' : 'Upload PDF/Documents'}</span>
+              </div>
+            </Button>
+          </div>
           
           {/* AI Provider Selection */}
           {availableProviders.length > 0 && (

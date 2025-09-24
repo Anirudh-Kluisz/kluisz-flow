@@ -24,7 +24,7 @@ export const StudioToolbar = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleRun = () => {
+  const handleRun = async () => {
     if (nodes.length === 0) {
       toast({
         title: "No Workflow",
@@ -34,18 +34,79 @@ export const StudioToolbar = () => {
       return;
     }
 
+    // Check if there's a DataIngest node
+    const hasDataIngest = nodes.some(node => node.type === 'dataIngest');
+    if (!hasDataIngest) {
+      toast({
+        title: "No Data Source",
+        description: "Add a DataIngest node to your workflow first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsRunning(true);
     
-    // Generate a run ID and navigate to run detail page
-    const runId = `run-${Date.now()}`;
-    
-    toast({
-      title: "Workflow Started",
-      description: `Running ${nodes.length} nodes...`,
-    });
+    try {
+      toast({
+        title: "Workflow Started",
+        description: `Running case study analysis on uploaded files...`,
+      });
 
-    // Navigate to run detail page 
-    navigate(`/runs/${runId}`);
+      // Execute the real case study analysis workflow
+      const response = await fetch('/api/case-study/run-workflow', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          workflowId: `workflow-${Date.now()}`,
+          nodes: nodes.map(node => ({
+            id: node.id,
+            type: node.type,
+            data: node.data
+          }))
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        toast({
+          title: "Workflow Completed", 
+          description: result.message || `Analysis complete! Generated ${result.documentsCreated || 0} documents.`,
+        });
+
+        // Show results immediately instead of navigating
+        console.log('Workflow results:', result);
+        
+        // Create a simple results display
+        if (result.results && result.results.length > 0) {
+          const successfulResults = result.results.filter((r: any) => !r.error);
+          const resultSummary = successfulResults.map((r: any) => 
+            `✅ ${r.fileName}: Analysis completed with ${r.provider.toUpperCase()}`
+          ).join('\n');
+          
+          toast({
+            title: "Download Ready",
+            description: `${successfulResults.length} .doc files generated and ready for download from the DataIngest nodes.`,
+          });
+        }
+        
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Workflow execution failed');
+      }
+    } catch (error) {
+      console.error('Workflow execution error:', error);
+      toast({
+        title: "Workflow Failed", 
+        description: error instanceof Error ? error.message : "There was an error running your workflow. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRunning(false);
+    }
   };
 
   const handleStop = () => {

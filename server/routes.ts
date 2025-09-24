@@ -352,4 +352,81 @@ export function registerRoutes(app: Express) {
       res.status(500).json({ error: 'Failed to list generated documents' });
     }
   });
+
+  // Execute complete workflow analysis
+  app.post('/api/case-study/run-workflow', async (req, res) => {
+    try {
+      const { workflowId, nodes } = req.body;
+      
+      // Find DataIngest nodes in the workflow
+      const dataIngestNodes = nodes.filter((node: any) => node.type === 'dataIngest');
+      if (dataIngestNodes.length === 0) {
+        return res.status(400).json({ error: 'No DataIngest nodes found in workflow' });
+      }
+      
+      // Get all uploaded files
+      const allFiles = await fileStorageService.getAllFiles();
+      if (allFiles.length === 0) {
+        return res.status(400).json({ error: 'No files uploaded for analysis' });
+      }
+      
+      // Get available providers
+      const availableProviders = aiResponseService.getAvailableProviders();
+      if (availableProviders.length === 0) {
+        return res.status(400).json({ error: 'No AI providers configured' });
+      }
+      
+      const provider = availableProviders[0]; // Use first available provider
+      const results = [];
+      let documentsCreated = 0;
+      
+      // Process each PDF file
+      for (const file of allFiles) {
+        if (file.mimeType === 'application/pdf') {
+          try {
+            console.log(`Processing file: ${file.name} with provider: ${provider}`);
+            
+            // Run complete case study analysis
+            const result = await caseStudyAnalysisService.runCompleteAnalysis(
+              file.id,
+              file.name,
+              provider
+            );
+            
+            results.push({
+              fileId: file.id,
+              fileName: file.name,
+              provider,
+              documentPath: result.documentPath,
+              slideContent: result.slideContent,
+              analysis: result.analysis
+            });
+            
+            documentsCreated++;
+          } catch (error) {
+            console.error(`Error processing file ${file.name}:`, error);
+            results.push({
+              fileId: file.id,
+              fileName: file.name,
+              provider,
+              error: error.message
+            });
+          }
+        }
+      }
+      
+      res.json({
+        success: true,
+        workflowId,
+        documentsCreated,
+        totalFiles: allFiles.length,
+        provider,
+        results,
+        message: `Workflow completed! Generated ${documentsCreated} analysis documents.`
+      });
+    } catch (error) {
+      console.error('Error running workflow:', error);
+      res.status(500).json({ error: 'Workflow execution failed' });
+    }
+  });
 }
