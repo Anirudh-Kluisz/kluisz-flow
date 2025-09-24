@@ -68,7 +68,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   loadGraphSpec: (spec) => {
     const nodes: Node[] = spec.nodes.map((node, index) => ({
       id: node.id,
-      type: 'aiAgent',
+      type: node.type === 'DataIngest' ? 'dataIngest' : 'aiAgent',
       position: { x: 100 + (index % 3) * 300, y: 100 + Math.floor(index / 3) * 200 },
       data: {
         label: node.label,

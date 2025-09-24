@@ -14,10 +14,12 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useStudioStore } from '@/stores/studioStore';
 import { AIAgentNode } from './nodes/AIAgentNode';
+import { DataIngestNode } from './nodes/DataIngestNode';
 
 // Define custom node types
 const nodeTypes = {
   aiAgent: AIAgentNode,
+  dataIngest: DataIngestNode,
 };
 
 export const StudioCanvas = () => {
